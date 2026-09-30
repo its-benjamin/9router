@@ -99,9 +99,19 @@ export async function handleSearch(request) {
 
 async function handleSingleProviderSearch(body, providerInput, request, apiKey, settings) {
   const query = body.query;
-  const providerId = resolveProviderId(providerInput);
+  let providerStr = providerInput;
+  let modelStr = body.model;
+  if (typeof providerStr === "string" && providerStr.includes("/")) {
+    const slashIdx = providerStr.indexOf("/");
+    const prefix = providerStr.slice(0, slashIdx);
+    const resolvedPrefix = resolveProviderId(prefix);
+    if (AI_PROVIDERS[resolvedPrefix]) {
+      providerStr = prefix;
+      modelStr = providerInput.slice(slashIdx + 1);
+    }
+  }
+  const providerId = resolveProviderId(providerStr);
   const resolvedProvider = AI_PROVIDERS[providerId];
-
   if (!resolvedProvider) {
     log.warn("SEARCH", "Unknown provider", { provider: providerInput });
     return errorResponse(HTTP_STATUS.BAD_REQUEST, `Unknown provider: ${providerInput}`);
@@ -125,6 +135,7 @@ async function handleSingleProviderSearch(body, providerInput, request, apiKey, 
   const coreBody = {
     query: query.trim(),
     provider: providerId,
+    model: (typeof modelStr === "string" && modelStr !== providerInput && modelStr !== providerId && modelStr !== resolvedProvider.alias) ? modelStr : undefined,
     max_results: body.max_results,
     search_type: body.search_type,
     country: body.country,
