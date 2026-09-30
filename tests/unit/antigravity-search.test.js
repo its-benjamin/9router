@@ -75,7 +75,7 @@ describe("Antigravity web search", () => {
     expect(capturedUrl).toContain("/v1internal:generateContent");
     expect(capturedBody).toMatchObject({
       project: "ag-test-project",
-      model: "gemini-3.8-flash",
+      model: "gemini-3.8-flash-low",
       userAgent: "antigravity",
       requestType: "search",
       request: {

@@ -15,6 +15,7 @@ import { errorResponse, unavailableResponse } from "open-sse/utils/error.js";
 import { HTTP_STATUS } from "open-sse/config/runtimeConfig.js";
 import * as log from "../utils/logger.js";
 import { updateProviderCredentials, checkAndRefreshToken } from "../services/tokenRefresh.js";
+import { getProjectIdForConnection } from "open-sse/services/projectId.js";
 import { handleComboChat, getComboModelsFromData } from "open-sse/services/combo.js";
 
 /**
@@ -213,6 +214,13 @@ async function handleSingleProviderSearch(body, providerInput, request, apiKey, 
 
     const refreshedCredentials = await checkAndRefreshToken(providerId, credentials);
 
+    // Ensure real project ID is available for providers that need it (Antigravity/Gemini-CLI)
+    if ((providerId === "antigravity" || providerId === "gemini-cli") && !refreshedCredentials.projectId) {
+      const pid = await getProjectIdForConnection(credentials.connectionId, refreshedCredentials.accessToken, providerId);
+      if (pid) {
+        refreshedCredentials.projectId = pid;
+      }
+    }
     const result = await handleSearchCore({
       body: coreBody,
       provider: resolvedProvider,
