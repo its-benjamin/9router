@@ -221,6 +221,7 @@ async function handleSingleProviderSearch(body, providerInput, request, apiKey, 
       const pid = await getProjectIdForConnection(credentials.connectionId, refreshedCredentials.accessToken, providerId);
       if (pid) {
         refreshedCredentials.projectId = pid;
+        updateProviderCredentials(credentials.connectionId, { projectId: pid }).catch(() => { });
       }
     }
     const result = await handleSearchCore({
