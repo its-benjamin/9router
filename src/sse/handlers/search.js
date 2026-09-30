@@ -101,7 +101,7 @@ export async function handleSearch(request) {
 async function handleSingleProviderSearch(body, providerInput, request, apiKey, settings) {
   const query = body.query;
   let providerStr = providerInput;
-  let modelStr = body.model;
+  let modelStr = null;
   if (typeof providerStr === "string" && providerStr.includes("/")) {
     const slashIdx = providerStr.indexOf("/");
     const prefix = providerStr.slice(0, slashIdx);
@@ -110,6 +110,8 @@ async function handleSingleProviderSearch(body, providerInput, request, apiKey, 
       providerStr = prefix;
       modelStr = providerInput.slice(slashIdx + 1);
     }
+  } else if (body.provider && body.model && body.model !== body.provider) {
+    modelStr = body.model;
   }
   const providerId = resolveProviderId(providerStr);
   const resolvedProvider = AI_PROVIDERS[providerId];
@@ -136,7 +138,7 @@ async function handleSingleProviderSearch(body, providerInput, request, apiKey, 
   const coreBody = {
     query: query.trim(),
     provider: providerId,
-    model: (typeof modelStr === "string" && modelStr !== providerInput && modelStr !== providerId && modelStr !== resolvedProvider.alias) ? modelStr : undefined,
+    model: modelStr || undefined,
     max_results: body.max_results,
     search_type: body.search_type,
     country: body.country,
