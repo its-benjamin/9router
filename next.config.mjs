@@ -42,19 +42,27 @@ const nextConfig = {
   // letter). That throw happens at module scope, so every consumer of `open` dies on
   // import — including xAI/Grok token refresh, which loads the OAuth service that imports
   // it. Keeping it external preserves the real `import.meta.url` at runtime.
+  // Next 15+ top-level key; keep for forward-compat alongside experimental key below
   serverExternalPackages: ["better-sqlite3", "sql.js", "node:sqlite", "bun:sqlite", "open"],
   turbopack: {
     root: tracingRoot
-  },
-  outputFileTracingRoot: tracingRoot,
-  outputFileTracingExcludes: {
-    "*": ["./gitbook/**/*"]
   },
   images: {
     unoptimized: true
   },
   env: stampBuild(),
   experimental: {
+    outputFileTracingRoot: tracingRoot,
+    outputFileTracingExcludes: {
+      "*": [
+        "./gitbook/**/*",
+        "**/AppData/Local/**",
+        "**/AppData/Roaming/**",
+        "**/.config/**",
+        "**/.codex/**",
+        "**/Cookies/**"
+      ]
+    },
     // Next 14 reads this key (top-level serverExternalPackages is Next 15+ and
     // ignored with a warning). Keep both so the db adapters stay external.
     serverComponentsExternalPackages: ["better-sqlite3", "sql.js", "node:sqlite", "bun:sqlite", "open"],
