@@ -108,12 +108,13 @@ const CHAT_SEARCH_CONFIG = {
       credentials?.projectId ? null : "Antigravity account has no projectId — reconnect the account",
     buildBody: (query, model, credentials) => {
       // Antigravity models use tiered suffixes in their API ID (e.g. gemini-3.8-flash-low, gemini-3.8-flash-medium)
-      let resolvedModel = "gemini-3.8-flash-low";
+      // Default to gemini-3.8-flash-tiered (Antigravity native auto-thinking Flash model)
+      let resolvedModel = "gemini-3.8-flash-tiered";
       if (model && model !== "gemini-3.8-flash" && model !== "ag" && model !== "antigravity") {
         const upstream = getModelUpstreamId("antigravity", model);
         if (upstream && upstream !== model) {
           resolvedModel = upstream.replace(/\([^()]+\)\s*$/, "").trim();
-        } else if (model.startsWith("gemini-")) {
+        } else if (model.startsWith("gemini-") || model.startsWith("claude-") || model.startsWith("gpt-")) {
           resolvedModel = model.replace(/\([^()]+\)\s*$/, "").trim();
         }
       }

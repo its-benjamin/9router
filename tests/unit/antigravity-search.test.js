@@ -45,10 +45,10 @@ afterEach(() => {
 });
 
 describe("Antigravity web search", () => {
-  it("uses gemini-3.8-flash-low as the default search model in the registry", () => {
+  it("uses gemini-3.8-flash as the default search model in the registry", () => {
     const entry = REGISTRY.find((candidate) => candidate.id === "antigravity");
-    expect(entry?.searchViaChat?.defaultModel).toBe("gemini-3.8-flash-low");
-    expect(PROVIDER_MEDIA.antigravity?.searchViaChat?.defaultModel).toBe("gemini-3.8-flash-low");
+    expect(entry?.searchViaChat?.defaultModel).toBe("gemini-3.8-flash");
+    expect(PROVIDER_MEDIA.antigravity?.searchViaChat?.defaultModel).toBe("gemini-3.8-flash");
   });
 
   it("sends gemini-3.8-flash by default to Antigravity v1internal:generateContent", async () => {
@@ -75,7 +75,7 @@ describe("Antigravity web search", () => {
     expect(capturedUrl).toContain("/v1internal:generateContent");
     expect(capturedBody).toMatchObject({
       project: "ag-test-project",
-      model: "gemini-3.8-flash-low",
+      model: "gemini-3.8-flash-tiered",
       userAgent: "antigravity",
       requestType: "search",
       request: {
@@ -112,7 +112,29 @@ describe("Antigravity web search", () => {
     expect(capturedBody.model).toBe("gemini-3.7-flash");
   });
 
-  it("falls back to gemini-3.8-flash-low when an unrecognized combo name is passed as model", async () => {
+  it("preserves explicit tier models like gemini-3.8-flash-low", async () => {
+    let capturedBody = null;
+
+    vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+      capturedBody = JSON.parse(init.body);
+      return new Response(JSON.stringify(MOCK_ANTIGRAVITY_RESPONSE), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }));
+
+    const provider = REGISTRY.find((p) => p.id === "antigravity");
+    const result = await handleSearchCore({
+      body: { query: "AI news", model: "gemini-3.8-flash-low" },
+      provider,
+      credentials: CREDENTIALS,
+    });
+
+    expect(result.success).toBe(true);
+    expect(capturedBody.model).toBe("gemini-3.8-flash-low");
+  });
+
+  it("falls back to gemini-3.8-flash-tiered when an unrecognized combo name is passed as model", async () => {
     let capturedBody = null;
 
     vi.stubGlobal("fetch", vi.fn(async (url, init) => {
@@ -131,6 +153,6 @@ describe("Antigravity web search", () => {
     });
 
     expect(result.success).toBe(true);
-    expect(capturedBody.model).toBe("gemini-3.8-flash-low");
+    expect(capturedBody.model).toBe("gemini-3.8-flash-tiered");
   });
 });
