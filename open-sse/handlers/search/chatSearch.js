@@ -112,10 +112,9 @@ const CHAT_SEARCH_CONFIG = {
       let resolvedModel = "gemini-3.8-flash-tiered";
       if (model && model !== "gemini-3.8-flash" && model !== "ag" && model !== "antigravity") {
         const upstream = getModelUpstreamId("antigravity", model);
-        if (upstream && upstream !== model) {
-          resolvedModel = upstream.replace(/\([^()]+\)\s*$/, "").trim();
-        } else if (model.startsWith("gemini-") || model.startsWith("claude-") || model.startsWith("gpt-")) {
-          resolvedModel = model.replace(/\([^()]+\)\s*$/, "").trim();
+        const candidate = (upstream && upstream !== model) ? upstream : model;
+        if (candidate.startsWith("gemini-")) {
+          resolvedModel = candidate.replace(/\([^()]+\)\s*$/, "").trim();
         }
       }
       return {

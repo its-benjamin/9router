@@ -134,6 +134,28 @@ describe("Antigravity web search", () => {
     expect(capturedBody.model).toBe("gemini-3.8-flash-low");
   });
 
+  it("routes Claude and GPT models to gemini-3.8-flash-tiered for search grounding", async () => {
+    let capturedBody = null;
+
+    vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+      capturedBody = JSON.parse(init.body);
+      return new Response(JSON.stringify(MOCK_ANTIGRAVITY_RESPONSE), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }));
+
+    const provider = REGISTRY.find((p) => p.id === "antigravity");
+    const result = await handleSearchCore({
+      body: { query: "AI news", model: "claude-sonnet-4-6" },
+      provider,
+      credentials: CREDENTIALS,
+    });
+
+    expect(result.success).toBe(true);
+    expect(capturedBody.model).toBe("gemini-3.8-flash-tiered");
+  });
+
   it("falls back to gemini-3.8-flash-tiered when an unrecognized combo name is passed as model", async () => {
     let capturedBody = null;
 
