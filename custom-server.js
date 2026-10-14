@@ -483,6 +483,12 @@ if (require.main === module) {
   } else if (!process.env.PORT) {
     process.env.PORT = "20128";
   }
+  const hostIndex = process.argv.findIndex((arg) => arg === "--host" || arg === "-H");
+  if (hostIndex !== -1 && process.argv[hostIndex + 1]) {
+    process.env.HOSTNAME = process.argv[hostIndex + 1];
+  } else if (!process.env.HOSTNAME) {
+    process.env.HOSTNAME = "127.0.0.1";
+  }
   const standalone = path.join(__dirname, "server.js");
   if (fs.existsSync(standalone)) {
     require(standalone);
