@@ -69,6 +69,22 @@ docker build -t 9router-fork .
 docker run -d -p 20128:20128 -v 9router-data:/app/data 9router-fork
 ```
 
+Using Bun:
+
+```bash
+bun install
+bun run dev:bun
+bun run build:bun
+bun run start:bun
+```
+
+Or install globally without compiling:
+
+```bash
+bun add -g https://github.com/serenhope/9router/releases/download/canary/9router.tgz
+9router
+```
+
 Once it is running:
 
 | | |
