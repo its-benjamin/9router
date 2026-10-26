@@ -12,6 +12,7 @@ import {
   findOpencodeBinary,
   formatOpencodeCliPrompt,
   executeOpencodeCli,
+  isCliExecutionAllowed,
 } from "../utils/opencodeCliRunner.js";
 import {
   normalizeResponsesInput,
@@ -420,11 +421,12 @@ export class OpenCodeExecutor extends BaseExecutor {
   }
 
   async execute(args) {
-    const { model, body, proxyOptions, signal, log } = args;
+    const { model, body, proxyOptions, signal, log, clientRawRequest } = args;
     const effectiveProxyOptions = (proxyOptions?.connectionProxyEnabled && proxyOptions?.connectionProxyUrl)
       ? proxyOptions
       : { ...proxyOptions, connectionProxyEnabled: false, connectionProxyUrl: "" };
-    const opencodeBin = findOpencodeBinary();
+    const isAllowed = await isCliExecutionAllowed(clientRawRequest);
+    const opencodeBin = isAllowed ? findOpencodeBinary() : null;
     const promptText = opencodeBin ? formatOpencodeCliPrompt(body) : "";
     const isSuitableForCli = Boolean(opencodeBin && promptText);
     if (isSuitableForCli) {

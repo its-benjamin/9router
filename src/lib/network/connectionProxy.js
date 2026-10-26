@@ -87,14 +87,21 @@ export async function resolveConnectionProxyConfig(
 
       const proxyUrl = normalizeString(proxyPool?.proxyUrl);
       const noProxy = normalizeString(proxyPool?.noProxy);
-
-      // Rotating residential proxies (e.g. res-*-sid-XXXXX):
-      // Each connection request randomizes the session ID so the proxy gateway
-      // assigns a fresh residential exit IP with its own clean rate limit window.
+      // Rotating residential proxies (generic autodetection: sessid, session, sid, customer-*, user-*):
+      // Ensure a valid residential session ID is always attached and randomized when requested.
+      const shouldRotateSession = providerSpecificData?.rotateSessionId === true;
       let effectiveProxyUrl = proxyUrl;
-      if (/-sid-\d+/i.test(proxyUrl)) {
-        const randSid = Math.floor(100000000 + Math.random() * 900000000);
-        effectiveProxyUrl = proxyUrl.replace(/-sid-\d+/i, `-sid-${randSid}`);
+      const isResi = /(?:-|_|\b)(?:sess?id|session)[-_]?\w+/i.test(proxyUrl)
+        || /(?:customer|user|lum-customer)-[^:@]+/i.test(proxyUrl);
+      if (isResi) {
+        const sid = Math.floor(1000000000 + Math.random() * 9000000000);
+        if (/(?:-|_|\b)(?:sess?id|session)[-_]?\w+/i.test(proxyUrl)) {
+          if (shouldRotateSession) {
+            effectiveProxyUrl = proxyUrl.replace(/((?:-|_|\b)(?:sess?id|session)[-_]?)\w+/i, `$1${sid}`);
+          }
+        } else if (/(?:customer|user|lum-customer)-[^:@]+/i.test(proxyUrl)) {
+          effectiveProxyUrl = proxyUrl.replace(/((?:customer|user|lum-customer)-[^:@]+)/i, `$1-sessid-${sid}-sesstime-10`);
+        }
       }
 
       const isValidPool =

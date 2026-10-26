@@ -1,3 +1,31 @@
+# v0.5.320 (2026-10-26) · 1 commits
+
+## What Was Changed
+
+- **Fix: OpenCode CLI Runner Engine Rewrite & Standalone Daemon Bypass (`open-sse/utils/opencodeCliRunner.js`):**
+  - **Resolved CLI `Unexpected server error` Crashes:** OpenCode CLI v2.x by default attempts to connect to a local background daemon on port 49374. When the daemon is busy or crashed, `opencode run` failed with `CLI exited with code 1: Error: { "name": "UnknownError", "data": { "message": "Unexpected server error" } }`. Added `--standalone` execution flag for OpenCode CLI v2+, running a self-contained in-process server in isolation and eliminating the `UnknownError` exit code 1 crashes.
+  - **Complete Client Tool-Calling Bridge:** Full bridging support for client coding agents (Cline, Cursor, OpenCode):
+    - Injects OpenAI tool schema definitions (`buildToolSystemPrompt`) into system instructions.
+    - Extracts tool calls from model output and stderr (`extractAttemptedTool`), including ANSI escape sequence stripping so command arguments and function names are never corrupted.
+    - Handles OpenCode sandbox refusals (*"This session only exposes the opencode tool namespace, no shell tool, cannot access filesystem"*): intercepts the attempted command and synthesizes proper OpenAI `tool_calls` payloads (`run_commands`, `execute_command`, `list_files`, `read_files`) so the client agent executes the tool in its workspace.
+    - Emits standard OpenAI streaming chunks (`delta.tool_calls` and `finish_reason: "tool_calls"`).
+  - **Stdin Prompt Streaming & CWD Discovery:** Piped prompt text directly via `childProcess.stdin` rather than command-line arguments to eliminate Windows `ENAMETOOLONG: name too long, uv_spawn` crashes. Dynamically discovers client workspace root (`resolveWorkspaceCwd`) from dialog messages and tool results so commands execute in the caller's target repo.
+  - **Proxy Tunneling & Auto-Retry:** Injects configured proxy credentials into CLI process environment (`HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`) with residential session auto-rotation on proxy connection drops before falling back.
+
+- **Fix: OpenCode Free-Tier Proxy Fallback Circuit Breaker & Multi-Proxy Rotation:**
+  - **Circuit Breaker on Dynamic Residential Gateways (`src/sse/handlers/chat.js` & `src/sse/services/auth.js`):** Resolved the rapid 30+ request fallback retry spam when residential proxies (e.g. Oxylabs, BrightData using `-sessid-`) receive upstream `429 FreeUsageLimitError` or `403 FreeTierError`. Added a per-pool consecutive failure circuit breaker (`MAX_POOL_ROTATION_ATTEMPTS = 3`) that trips and marks that specific gateway exhausted instead of generating infinite random session IDs into a void.
+  - **Unbounded Multi-Proxy Pool Rotation:** Removed artificial fallback caps so users with multiple proxy pools (whether dozens or thousands of proxies) can rotate through all active pools via Round-Robin or Random until all proxies have been attempted or the request deadline is reached.
+  - **Proxy Configuration Persistence:** Fixed proxy pool and rotation strategy saving in `NoAuthProxyCard.js` to store settings in `settings.providerStrategies[providerId]`, ensuring selected proxy pools persist properly across restarts.
+  - **Rotation Strategy UX:** Removed `disabled={!canRotate}` from the Rotation Strategy dropdown so users with <2 active pools can still interact with the select, view status hints, and choose "None (single pool)" without getting trapped.
+
+- **Feature: OpenCode Host CLI Process Engine Controls & Security (`src/shared/components/NoAuthProxyCard.js`):**
+  - Added a dedicated **Host CLI Process Engine** toggle on OpenCode provider pages (`/dashboard/providers/opencode-v2` and `opencode-v1`). Allows users to choose between running local CLI processes on the host machine or routing all requests through the external network wire.
+  - Added a **Max Concurrent CLI Processes** selector (1, 2, 4, 8, 16 processes) to cap simultaneous local child processes and prevent resource exhaustion.
+  - Added host process execution security guardrails: remote (non-loopback) requests are automatically blocked from invoking host CLI processes, and CLI execution is safe-by-default.
+  - Added commented configuration settings (`OPENCODE_CLI_ENABLED`, `OPENCODE_MAX_CONCURRENCY`) to `.env.example`.
+
+---
+
 # v0.5.319 (2026-10-25) · 1 commits
 
 ## What Was Changed

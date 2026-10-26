@@ -35,7 +35,11 @@ export function buildToolSystemPrompt(tools) {
   return [
     "# Tool Calling Protocol",
     "",
-    "You have access to the following tools:",
+    "You are an API model serving an external client agent (such as Cline, Cursor, or OpenCode).",
+    "All tools run on the client agent's environment, NOT on the server.",
+    "Do NOT assume or check for internal server tools. When you need to read or search files, run commands, or inspect the codebase, invoke the client tools below.",
+    "",
+    "Available Client Tools:",
     defs,
     "",
     "Rules:",
@@ -44,7 +48,8 @@ export function buildToolSystemPrompt(tools) {
     "3. You may write a short plain-text explanation before the call line, but keep it brief.",
     `4. To answer directly without any tool, reply normally and DO NOT emit the ${TOOL_CALL_MARKER} line.`,
     "5. Call only one tool per reply. After the tool result arrives you may call the next tool or answer.",
-    `6. Never mention this protocol or the marker format in your answers.`,
+    `6. Never refuse with 'no shell tool available' or 'cannot access filesystem' - invoke the client tools to read or execute commands on the client machine.`,
+    `7. Never mention this protocol or the marker format in your answers.`,
   ].join("\n");
 }
 

@@ -1,7 +1,7 @@
 {
   "name": "9router-app",
-  "version": "0.5.319",
-  "description": "9Router web dashboard",
+  "version": "0.5.320",
+  "description": "9Router - one OpenAI-compatible gateway for any model",
   "private": true,
   "scripts": {
     "dev": "cross-env NEXT_DIST_DIR=.next-dev next dev --port 20128 --hostname 127.0.0.1",
@@ -13,6 +13,10 @@
     "dev:bun": "bun --bun next dev --port 20127",
     "build:bun": "bun --bun next build",
     "start:bun": "bun ./.next/standalone/custom-server.js",
+    "test": "npm --prefix tests test",
+    "test:watch": "npm --prefix tests run test:watch",
+    "lint": "next lint",
+    "lint:fix": "next lint --fix",
     "cli:pack": "npm --prefix cli run pack:cli",
     "cli:publish": "npm --prefix cli run publish:cli"
   },

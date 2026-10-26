@@ -14,6 +14,7 @@ import {
   findOpencodeBinary,
   formatOpencodeCliPrompt,
   executeOpencodeCli,
+  isCliExecutionAllowed,
 } from "../utils/opencodeCliRunner.js";
 import {
   normalizeResponsesInput,
@@ -359,7 +360,7 @@ export class OpenCodeV2Executor extends BaseExecutor {
   }
 
   async execute(args) {
-    const { model, body, stream, credentials, signal, log, proxyOptions } = args;
+    const { model, body, stream, credentials, signal, log, proxyOptions, clientRawRequest } = args;
     // When credentials explicitly specify proxy configuration (e.g. from auth resolver with builtin / custom pool / none),
     // respect it directly.
     const effectiveProxyOptions = proxyOptions?.connectionProxyEnabled !== undefined
@@ -370,8 +371,9 @@ export class OpenCodeV2Executor extends BaseExecutor {
           connectionProxyUrl: proxyOptions?.connectionProxyUrl || "",
         };
 
-    // Check if official OpenCode CLI engine is available on system
-    const opencodeBin = findOpencodeBinary();
+    // Check if official OpenCode CLI engine is available and allowed (disabled by default in settings)
+    const isAllowed = await isCliExecutionAllowed(clientRawRequest);
+    const opencodeBin = isAllowed ? findOpencodeBinary() : null;
     const promptText = opencodeBin ? formatOpencodeCliPrompt(body) : "";
     const isSuitableForCli = Boolean(opencodeBin && promptText);
     if (isSuitableForCli) {

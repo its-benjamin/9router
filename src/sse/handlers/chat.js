@@ -391,12 +391,13 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
   let lastError = null;
   let lastStatus = null;
   let lastHeaders = null;
+  const poolRotationCounts = new Map();
+  const MAX_POOL_ROTATION_ATTEMPTS = 3; // Maximum session retries on a single dynamic residential proxy pool before marking it exhausted
   // Free-tier session rotation only opens new quota windows: when the client
   // aborts (probe budget spent, user cancelled), every proxy is answering the
   // same spent-quota 429 and more attempts cannot help, so stop instead of
   // burning the pool dry past the caller's deadline.
-  const fallbackDeadlineMs = Date.now() + (provider === "opencode" ? OPENCODE_FALLBACK_BUDGET_MS : GENERIC_FALLBACK_BUDGET_MS);
-
+  const fallbackDeadlineMs = Date.now() + (provider === "opencode" || provider === "opencode-v2" ? OPENCODE_FALLBACK_BUDGET_MS : GENERIC_FALLBACK_BUDGET_MS);
   while (true) {
     const credentials = await getProviderCredentials(provider, excludeConnectionIds, model, { requestedModel: requestedModel || model });
 
@@ -532,13 +533,27 @@ async function handleSingleModelChat(body, modelStr, clientRawRequest = null, re
           rotateOpencodeSession(refreshedCredentials);
         }
       } catch { /* a failed rotation must not block the fallback */ }
-      log.warn("FALLBACK", `⇄ ACC:${credentials.connectionName} SESSION ROTATED (free quota spent) → NEXT ACCOUNT`);
-      excludeConnectionIds.add(credentials.connectionId);
+
+      const poolId = credentials.proxyPoolId || "default";
+      const currentPoolAttempts = (poolRotationCounts.get(poolId) || 0) + 1;
+      poolRotationCounts.set(poolId, currentPoolAttempts);
+
       lastError = result.error;
       lastStatus = result.status;
       lastHeaders = upstreamResponseHeaders(result.response?.headers);
+
+      if (currentPoolAttempts >= MAX_POOL_ROTATION_ATTEMPTS) {
+        log.warn("CIRCUIT_BREAKER", `🛑 [${provider}/${model}] Circuit breaker tripped for pool ${credentials.connectionName}: ${currentPoolAttempts} consecutive session attempts failed (free tier exhausted). Halting this pool and advancing rotation.`);
+        excludeConnectionIds.add(`pool:${poolId}`);
+        excludeConnectionIds.add(`proxy:${poolId}:exhausted`);
+        excludeConnectionIds.add(poolId);
+      } else {
+        log.warn("FALLBACK", `⇄ ACC:${credentials.connectionName} SESSION ROTATED (${currentPoolAttempts}/${MAX_POOL_ROTATION_ATTEMPTS}) → NEXT SESSION`);
+        excludeConnectionIds.add(credentials.connectionId);
+      }
+
       if (Date.now() >= fallbackDeadlineMs) {
-        log.warn("FALLBACK", `⏱ fallback budget spent for ${provider}/${model} after ${excludeConnectionIds.size} accounts — returning last error`);
+        log.warn("CIRCUIT_BREAKER", `⏱ [${provider}/${model}] Fallback deadline reached (${excludeConnectionIds.size} proxy/session attempts) — returning last error.`);
         return result.response;
       }
       continue;
